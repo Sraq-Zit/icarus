@@ -19,7 +19,7 @@ __all__ = ['run', 'handler']
 logger = logging.getLogger('main')
 
 
-def handler(settings, orch, output, signum=None, frame=None):
+def handler(settings, orch, output, signum, frame=None):
     """Signal handler
 
     This function is called when the simulator receive SIGTERM, SIGHUP, SIGKILL
@@ -106,7 +106,7 @@ def run(config_file, output, config_override):
     _validate_settings(settings, freeze=True)
     # set up orchestration
     orch = Orchestrator(settings)
-    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT, signal.SIGABRT):
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGABRT):
         signal.signal(sig, functools.partial(handler, settings, orch, output))
     logger.info('Launching orchestrator')
     orch.run()

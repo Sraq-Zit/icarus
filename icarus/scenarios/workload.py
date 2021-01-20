@@ -97,6 +97,7 @@ class StationaryWorkload(object):
         self.rate = rate
         self.n_warmup = n_warmup
         self.n_measured = n_measured
+        self.popularity = {c: 0 for c in self.contents}
         random.seed(seed)
         self.beta = beta
         if beta != 0:
@@ -115,6 +116,7 @@ class StationaryWorkload(object):
                 receiver = self.receivers[self.receiver_dist.rv() - 1]
             content = int(self.zipf.rv())
             log = (req_counter >= self.n_warmup)
+            self.popularity[content] += 1
             event = {'receiver': receiver, 'content': content, 'log': log}
             yield (t_event, event)
             req_counter += 1

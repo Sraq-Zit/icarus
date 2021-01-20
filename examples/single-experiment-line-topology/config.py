@@ -12,7 +12,7 @@ LOG_LEVEL = 'INFO'
 
 # If True, executes simulations in parallel using multiple processes
 # to take advantage of multicore CPUs
-PARALLEL_EXECUTION = True
+PARALLEL_EXECUTION = False
 
 # Number of processes used to run simulations in parallel.
 # This option is ignored if PARALLEL_EXECUTION = False
@@ -41,14 +41,14 @@ EXPERIMENT_QUEUE = deque()
 experiment = Tree()
 
 # Set topology
-experiment['topology']['name'] = 'PATH'
-experiment['topology']['n'] = 10
-experiment['topology']['delay'] = 10
+experiment['topology']['name'] = 'TREE'
+experiment['topology']['h'] = 2
+experiment['topology']['k'] = 4
 
 # Set workload
 experiment['workload'] = {
          'name':       'STATIONARY',
-         'n_contents': 10 ** 5,
+         'n_contents': 10,
          'n_warmup':   10 ** 2,
          'n_measured': 4 * 10 ** 2,
          'alpha':      1.0,
@@ -57,13 +57,13 @@ experiment['workload'] = {
 
 # Set cache placement
 experiment['cache_placement']['name'] = 'UNIFORM'
-experiment['cache_placement']['network_cache'] = 0.01
+experiment['cache_placement']['network_cache'] = 1e2
 
 # Set content placement
 experiment['content_placement']['name'] = 'UNIFORM'
 
 # Set cache replacement policy
-experiment['cache_policy']['name'] = 'LRU'
+experiment['cache_policy']['name'] = 'CUSTOM'
 
 # Set caching meta-policy
 experiment['strategy']['name'] = 'LCE'

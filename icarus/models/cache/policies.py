@@ -17,22 +17,22 @@ import numpy as np
 
 
 __all__ = [
-        'LinkedSet',
-        'Cache',
-        'NullCache',
-        'BeladyMinCache',
-        'LruCache',
-        'SegmentedLruCache',
-        'InCacheLfuCache',
-        'PerfectLfuCache',
-        'FifoCache',
-        'ClimbCache',
-        'RandEvictionCache',
-        'insert_after_k_hits_cache',
-        'rand_insert_cache',
-        'keyval_cache',
-        'ttl_cache',
-           ]
+    'LinkedSet',
+    'Cache',
+    'NullCache',
+    'BeladyMinCache',
+    'LruCache',
+    'SegmentedLruCache',
+    'InCacheLfuCache',
+    'PerfectLfuCache',
+    'FifoCache',
+    'ClimbCache',
+    'RandEvictionCache',
+    'insert_after_k_hits_cache',
+    'rand_insert_cache',
+    'keyval_cache',
+    'ttl_cache',
+]
 
 
 class LinkedSet(object):
@@ -527,7 +527,7 @@ class Cache(object):
             'PUT':    self.put,
             'UPDATE': self.put,
             'DELETE': self.remove
-                }[op](k, *args, **kwargs)
+        }[op](k, *args, **kwargs)
         return res if res is not None else False
 
     @abc.abstractmethod
@@ -818,6 +818,110 @@ class BeladyMinCache(Cache):
         self._cache.clear()
 
 
+@register_cache_policy('CUSTOM')
+class CustomCache(Cache):
+    """custom cache eviction policy.
+
+    In this customized policy, we try to make the concept of content size applicable in this echosystem, contents has a *size* property to evict when the content size is bigger than the available cache size.    
+    """
+    CONTENT_MAP = {}
+
+    @inheritdoc(Cache)
+    def __init__(self, maxlen, **kwargs):
+        self._cache = LinkedSet()
+        self._maxlen = int(maxlen)
+        if self._maxlen <= 0:
+            raise ValueError('maxlen must be positive')
+
+
+    @inheritdoc(Cache)
+    def __len__(self):
+        return sum([self.CONTENT_MAP[c] for c in self._cache])
+
+    @property
+    @inheritdoc(Cache)
+    def maxlen(self):
+        return self._maxlen
+
+    @inheritdoc(Cache)
+    def dump(self):
+        return list(iter(self._cache))
+
+    def position(self, k, *args, **kwargs):
+        """Return the current position of an item in the cache. Position *0*
+        refers to the head of cache (i.e. most recently used item), while
+        position *maxlen - 1* refers to the tail of the cache (i.e. the least
+        recently used item).
+
+        This method does not change the internal state of the cache.
+
+        Parameters
+        ----------
+        k : any hashable type
+            The item looked up in the cache
+
+        Returns
+        -------
+        position : int
+            The current position of the item in the cache
+        """
+        if k not in self._cache:
+            raise ValueError('The item %s is not in the cache' % str(k))
+        return self._cache.index(k)
+
+    @inheritdoc(Cache)
+    def has(self, k, *args, **kwargs):
+        return k in self._cache
+
+    @inheritdoc(Cache)
+    def get(self, k, *args, **kwargs):
+        # search content over the list
+        # if it has it push on top, otherwise return false
+        if k not in self._cache:
+            return False
+        self._cache.move_to_top(k)
+        return True
+
+    def put(self, k, *args, **kwargs):
+        """Insert an item in the cache if not already inserted.
+
+        If the element is already present in the cache, it will pushed to the
+        top of the cache.
+
+        Parameters
+        ----------
+        k : any hashable type
+            The item to be inserted
+
+        Returns
+        -------
+        evicted : any hashable type
+            The evicted object or *None* if no contents were evicted.
+        """
+        # if content in cache, push it on top, no eviction
+        if k in self._cache:
+            self._cache.move_to_top(k)
+            return None
+        # if content not in cache append it on top
+        self._cache.append_top(k)
+        self.CONTENT_MAP[k] = random.randint(1, int(self._maxlen / 4))
+        popped = None
+        while len(self) > self._maxlen:
+            popped = self._cache.pop_bottom()
+        return popped
+
+    @inheritdoc(Cache)
+    def remove(self, k, *args, **kwargs):
+        if k not in self._cache:
+            return False
+        self._cache.remove(k)
+        return True
+
+    @inheritdoc(Cache)
+    def clear(self):
+        self._cache.clear()
+
+
 @register_cache_policy('LRU')
 class LruCache(Cache):
     """Least Recently Used (LRU) cache eviction policy.
@@ -958,10 +1062,12 @@ class SegmentedLruCache(Cache):
         if self._maxlen <= 0:
             raise ValueError('maxlen must be positive')
         if not isinstance(segments, int) or segments <= 0 or segments > maxlen:
-            raise ValueError('segments must be an integer and 0 < segments <= maxlen')
+            raise ValueError(
+                'segments must be an integer and 0 < segments <= maxlen')
         if alloc:
             if len(alloc) != segments:
-                raise ValueError('alloc must be an iterable with as many entries as segments')
+                raise ValueError(
+                    'alloc must be an iterable with as many entries as segments')
             if np.abs(np.sum(alloc) - 1) > 0.001:
                 raise ValueError('All alloc entries must sum up to 1')
         else:

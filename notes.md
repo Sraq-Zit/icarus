@@ -13,6 +13,7 @@
       - neighbors (model.topology.adj\[node])
       - cache status of node (model.cache\[node])
 - [ ] Integerate Qlearning..
+- [ ] Implement Nash equilibrium
 
 
 # Notes

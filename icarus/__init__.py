@@ -22,6 +22,7 @@ __license__ = release.license_short
 __modules_to_register = [
      'icarus.models.cache',
      'icarus.models.strategy',
+     'icarus.models.RL',
      'icarus.execution.collectors',
      'icarus.results.readwrite',
      'icarus.scenarios.topology',

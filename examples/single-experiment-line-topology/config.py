@@ -48,7 +48,7 @@ experiment['topology']['k'] = 4
 # Set workload
 experiment['workload'] = {
          'name':       'STATIONARY',
-         'n_contents': 10,
+         'n_contents': 5,
          'n_warmup':   10 ** 2,
          'n_measured': 4 * 10 ** 2,
          'alpha':      1.0,
@@ -65,8 +65,11 @@ experiment['content_placement']['name'] = 'UNIFORM'
 # Set cache replacement policy
 experiment['cache_policy']['name'] = 'CUSTOM'
 
+# Set reinfrocement learning algorithm
+experiment['rl_algorithm']['name'] = 'Q-LEARNING'
+
 # Set caching meta-policy
-experiment['strategy']['name'] = 'LCE'
+experiment['strategy']['name'] = 'AIE'
 
 # Description of the experiment
 experiment['desc'] = "Line topology with 10 nodes"

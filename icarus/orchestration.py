@@ -15,7 +15,7 @@ import traceback
 
 from icarus.execution import exec_experiment
 from icarus.registry import TOPOLOGY_FACTORY, CACHE_PLACEMENT, CONTENT_PLACEMENT, \
-                            CACHE_POLICY, WORKLOAD, DATA_COLLECTOR, STRATEGY
+                            CACHE_POLICY, WORKLOAD, DATA_COLLECTOR, STRATEGY, RL_ALGO
 from icarus.results import ResultSet
 from icarus.util import SequenceNumber, timestr
 
@@ -261,8 +261,15 @@ def run_scenario(settings, params, curr_exp, n_exp):
             logger.error('No implementation of cache policy %s was found.' % cache_policy['name'])
             return None
 
+        # cache eviction policy definition
+        rl_algorithm = tree['rl_algorithm'] if 'rl_algorithm' in tree else None
+        if rl_algorithm and rl_algorithm['name'] not in RL_ALGO:
+            logger.error('No implementation of reinforcement algorithm %s was found.' % rl_algorithm['name'])
+            return None
+
         # Configuration parameters of network model
         netconf = tree['netconf']
+        if rl_algorithm: netconf['rl_algorithm'] = rl_algorithm
 
         # Text description of the scenario run to print on screen
         scenario = tree['desc'] if 'desc' in tree else "Description N/A"

@@ -8,6 +8,8 @@ from icarus.util import inheritdoc, path_links
 
 from .base import Strategy
 
+import random
+
 __all__ = [
        'NearestReplicaRouting'
            ]
@@ -99,3 +101,62 @@ class NearestReplicaRouting(Strategy):
             raise ValueError('Metacaching policy %s not supported'
                              % self.metacaching)
         self.controller.end_session()
+
+@register_strategy('AIE')
+class LeaveCopyEverywhere(Strategy):
+    """AI Empowered (AIE) strategy.
+
+    In this strategy a copy of a content is replicated at the cache the
+    AI model provided as a decision to put the content in.
+    """
+
+    @inheritdoc(Strategy)
+    def __init__(self, view, controller, **kwargs):
+        super(LeaveCopyEverywhere, self).__init__(view, controller)
+
+    @inheritdoc(Strategy)
+    def process_event(self, time, receiver, content, log):
+        # get all required data
+        serving_node = None
+        source = self.view.content_source(content)
+        path = self.view.shortest_path(receiver, source)
+        rsu = path[1]
+
+        self.controller.start_session(time, receiver, content, log)
+
+        if self.view.cache_lookup(rsu, content): serving_node = rsu
+
+        # Check neighbors
+        if serving_node == None:
+            for node in self.controller.get_neigbbors(rsu):
+                if node != source:
+                    if self.view.cache_lookup(node, content):
+                        self.controller.get_content(rsu)
+                        self.controller.get_content(node)
+                        serving_node = node
+                        break
+                
+        # Route requests to original source and queries caches on the path
+        if serving_node == None:
+            for u, v in path_links(path):
+                self.controller.forward_request_hop(u, v)
+                if self.view.has_cache(v):
+                    if self.controller.get_content(v):
+                        serving_node = v
+                        break
+                # No cache hits, get content from source
+                self.controller.get_content(v)
+                serving_node = v
+        # Return content
+        path = list(reversed(self.view.shortest_path(receiver, serving_node)))
+        for u, v in path_links(path):
+            self.controller.forward_content_hop(u, v)
+
+        self.controller.put_content(rsu)
+
+        state = self.controller.get_state(rsu, content)
+        action = self.controller.get_best_action(rsu, state)
+        self.controller.train_model(rsu, state, action, random.randint(0, 100), state+1)
+        print(state)
+        self.controller.end_session()
+

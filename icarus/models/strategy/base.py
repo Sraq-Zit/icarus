@@ -21,9 +21,9 @@ class Strategy(object):
 
         Parameters
         ----------
-        view : NetworkView
+        view : icarus.execution.network.NetworkView
             An instance of the network view
-        controller : NetworkController
+        controller : icarus.execution.network.NetworkController
             An instance of the network controller
         kwargs : keyworded arguments, optional
             Additional strategy parameters

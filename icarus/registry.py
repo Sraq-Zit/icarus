@@ -18,6 +18,9 @@ CONTENT_PLACEMENT = {}
 # Dictionary storying all workload generators keyed by ID
 WORKLOAD = {}
 
+# Dictionary storying all reinforcement learning algorithms keyed by ID
+RL_ALGO = {}
+
 # Dictionary storying all data collector classes keyed by ID
 DATA_COLLECTOR = {}
 
@@ -64,6 +67,7 @@ register_topology_factory = register_decorator(TOPOLOGY_FACTORY)
 register_cache_placement = register_decorator(CACHE_PLACEMENT)
 register_content_placement = register_decorator(CONTENT_PLACEMENT)
 register_workload = register_decorator(WORKLOAD)
+register_rl_algorithms = register_decorator(RL_ALGO)
 register_data_collector = register_decorator(DATA_COLLECTOR)
 register_results_reader = register_decorator(RESULTS_READER)
 register_results_writer = register_decorator(RESULTS_WRITER)

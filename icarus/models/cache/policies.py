@@ -904,7 +904,7 @@ class CustomCache(Cache):
             return None
         # if content not in cache append it on top
         self._cache.append_top(k)
-        self.CONTENT_MAP[k] = random.randint(1, int(self._maxlen / 4))
+        self.CONTENT_MAP[k] = random.randint(int(self._maxlen / 10), int(self._maxlen / 2))
         popped = None
         while len(self) > self._maxlen:
             popped = self._cache.pop_bottom()

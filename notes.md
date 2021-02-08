@@ -12,7 +12,7 @@
     - cache status
       - neighbors (model.topology.adj\[node])
       - cache status of node (model.cache\[node])
-- [ ] Integerate Qlearning..
+- [ ] Integerate Qlearning
 - [ ] Implement Nash equilibrium
 
 
@@ -23,3 +23,10 @@
 - (Problem: simulating content size) The size for contents could be handled in Cache class (policies.py). by implementing methods (get, put, ...) we can create a caching and replacement policy based on different constraints as well as cache size
 
 - (Problem: accessing results) All needed results can be accessible through the NetworkController (network.py) which makes it the best place to store results which were not stored by default
+
+
+# Issues
+
+- Collision between content caching and replacement policy. 
+  - if the caching array is the same as the replacement array, then what to cache and what to replace
+  - if the replacement contents are not enough to allocate enough space for caching, then which contents are to choose for caching

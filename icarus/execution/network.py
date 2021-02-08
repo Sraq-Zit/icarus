@@ -325,6 +325,9 @@ class NetworkModel(object):
     This object should never be edited by strategies directly, but only through
     calls to the network controller.
     """
+    
+    CACHE = None
+    POPULARITY = None
 
     def __init__(self, topology, cache_policy, n_contents=0, shortest_path=None, rl_algorithm=None):
         """Constructor
@@ -356,6 +359,8 @@ class NetworkModel(object):
 
         # Number of contents
         self.n_contents = n_contents
+        self.POPULARITY = self.POPULARITY or {i: 0 for i in range(1, n_contents+1)}
+
 
         # Dictionary mapping each content object to its source
         # dict of location of contents keyed by content ID
@@ -403,10 +408,17 @@ class NetworkModel(object):
         # The intelligent agent for each router using RL
         self.ai_models = {}
         if rl_algorithm:
-            states = range((2**n_contents)*n_contents)
-            actions = range(2**(2*n_contents))
-            self.ai_models = {node: RL_ALGO[rl_algorithm['name']](states, actions, node=node, network_model=self)
+            if self.CACHE:
+                self.ai_models = self.CACHE
+            else:
+                states = range((2**n_contents)*n_contents)
+                actions = range(2**n_contents)
+                self.CACHE = self.ai_models = {node: RL_ALGO[rl_algorithm['name']](states, actions, node=node, network_model=self)
                                                                                                  for node in cache_size}
+
+        # In case of AI this dict stores observation to train the mode with the current state which
+        # would be the "next_state"
+        self.observations = {}
 
         # This is for a local un-coordinated cache (currently used only by
         # Hashrouting with edge cache)
@@ -423,7 +435,10 @@ class NetworkModel(object):
         self.removed_sources = {}
         self.removed_caches = {}
         self.removed_local_caches = {}
-
+    
+    def get_neigbbors(self, node, explicit=False):
+        neighbors = self.topology.adj[node]
+        return neighbors if explicit else  neighbors.keys()
 
 class NetworkController(object):
     """Network controller
@@ -475,6 +490,7 @@ class NetworkController(object):
             *True* if this session needs to be reported to the collector,
             *False* otherwise
         """
+        self.model.POPULARITY[content]+=1
         self.session = dict(timestamp=timestamp,
                             receiver=receiver,
                             content=content,
@@ -856,9 +872,13 @@ class NetworkController(object):
         if node in self.model.local_cache:
             return self.model.local_cache[node].put(self.session['content'])
 
+    def set_replacement_candidates(self, node, policy):
+        if node in self.model.cache:
+            self.model.cache[node].set_replacement_candidates(policy)
+
+    
     def get_neigbbors(self, node, explicit=False):
-        neighbors = self.model.topology.adj[node]
-        return neighbors if explicit else  neighbors.keys()
+        return self.model.get_neigbbors(node, explicit)
 
     def get_state(self, node, content):
         if node in self.model.ai_models:
@@ -868,7 +888,19 @@ class NetworkController(object):
         if node in self.model.ai_models:
             return self.model.ai_models[node].get_best_action(state)
 
-    def train_model(self, node, *args):
-        if node in self.model.ai_models:
+    def convert_action(self, action):
+        return [int(b) for b in bin(action)[2:].rjust(self.model.n_contents, '0')]
+    
+
+    def save_observation(self, node, *args):
+        self.model.observations[node] = args
+
+    def train_model(self, node, state):
+        if node in self.model.ai_models and node in self.model.observations:
+            args = self.model.observations[node] + (state,)
             return self.model.ai_models[node].train(*args)
             
+    def get_reward(self, node):
+        if node in self.model.ai_models:
+            return self.model.ai_models[node].reward()
+        

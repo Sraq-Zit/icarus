@@ -103,7 +103,7 @@ class NearestReplicaRouting(Strategy):
         self.controller.end_session()
 
 @register_strategy('AIE')
-class LeaveCopyEverywhere(Strategy):
+class AI_EMPOWERED(Strategy):
     """AI Empowered (AIE) strategy.
 
     In this strategy a copy of a content is replicated at the cache the
@@ -112,7 +112,7 @@ class LeaveCopyEverywhere(Strategy):
 
     @inheritdoc(Strategy)
     def __init__(self, view, controller, **kwargs):
-        super(LeaveCopyEverywhere, self).__init__(view, controller)
+        super(AI_EMPOWERED, self).__init__(view, controller)
 
     @inheritdoc(Strategy)
     def process_event(self, time, receiver, content, log):
@@ -124,7 +124,9 @@ class LeaveCopyEverywhere(Strategy):
 
         self.controller.start_session(time, receiver, content, log)
 
-        if self.view.cache_lookup(rsu, content): serving_node = rsu
+        if self.view.cache_lookup(rsu, content): 
+            self.controller.get_content(rsu)
+            serving_node = rsu
 
         # Check neighbors
         if serving_node == None:
@@ -156,7 +158,14 @@ class LeaveCopyEverywhere(Strategy):
 
         state = self.controller.get_state(rsu, content)
         action = self.controller.get_best_action(rsu, state)
-        self.controller.train_model(rsu, state, action, random.randint(0, 100), state+1)
-        print(state)
+        action_converted = self.controller.convert_action(action)
+        if action_converted[content-1]:
+            policy = [n+1 for n, p in enumerate(action_converted) if p and n+1 != content]
+            self.controller.set_replacement_candidates(content, policy)
+            self.controller.put_content(rsu)
+        
+
+        self.controller.train_model(rsu, state)
+        self.controller.save_observation(rsu, state, action, self.controller.get_reward(rsu))
         self.controller.end_session()
 

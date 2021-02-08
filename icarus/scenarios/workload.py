@@ -117,7 +117,7 @@ class StationaryWorkload(object):
             content = int(self.zipf.rv())
             log = (req_counter >= self.n_warmup)
             self.popularity[content] += 1
-            event = {'receiver': receiver, 'content': content, 'log': log}
+            event = {'receiver': receiver, 'content': content, 'log': True}
             yield (t_event, event)
             req_counter += 1
         return

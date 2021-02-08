@@ -19,6 +19,7 @@ import networkx as nx
 import fnss
 
 from icarus.registry import register_topology_factory
+from icarus.util import path_links
 
 
 __all__ = [
@@ -723,6 +724,54 @@ def topology_tiscali2(**kwargs):
             fnss.set_delays_constant(topology, EXTERNAL_LINK_DELAY, 'ms', [(u, v)])
         else:
             topology.adj[u][v]['type'] = 'internal'
+    return IcnTopology(topology)
+
+
+@register_topology_factory('HIERARCHY')
+def topology_hierarchy(k, h, delay=1, **kwargs):
+    """Returns a tree topology, with a source at the root, receivers at the
+    leafs and caches at all intermediate nodes.
+
+    Parameters
+    ----------
+    h : int
+        The height of the tree
+    k : int
+        The branching factor of the tree
+    delay : float
+        The link delay in milliseconds
+
+    Returns
+    -------
+    topology : IcnTopology
+        The topology object
+    """
+    topology = fnss.k_ary_tree_topology(k, h)
+    receivers = [v for v in topology.nodes()
+                 if topology.node[v]['depth'] == h]
+    sources = [v for v in topology.nodes()
+               if topology.node[v]['depth'] == 0]
+    routers = [v for v in topology.nodes()
+              if topology.node[v]['depth'] > 0
+              and topology.node[v]['depth'] < h]
+    topology.graph['icr_candidates'] = set(routers)
+    for v in sources:
+        fnss.add_stack(topology, v, 'source')
+    for v in receivers:
+        fnss.add_stack(topology, v, 'receiver')
+    for v in routers:
+        fnss.add_stack(topology, v, 'router')
+    # label links as internal
+    for u, v in topology.edges():
+        topology.adj[u][v]['type'] = 'external' if u in sources or v in sources else 'internal'
+    for u, v in path_links(routers):
+        topology.add_edge(u, v, type='internal')
+
+    # set weights and delays on all links
+    fnss.set_weights_constant(topology, 1.0)
+    fnss.set_delays_constant(topology, delay, 'ms', [(u, v) for u, v in topology.edges() if u in receivers or v in receivers])
+    fnss.set_delays_constant(topology, 2*delay, 'ms', [(u, v) for u, v in topology.edges() if u in routers and v in routers])
+    fnss.set_delays_constant(topology, 3*delay, 'ms', [(u, v) for u, v in topology.edges() if u in sources or v in sources])
     return IcnTopology(topology)
 
 

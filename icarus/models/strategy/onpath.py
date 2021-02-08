@@ -150,7 +150,6 @@ class LeaveCopyEverywhere(Strategy):
             if self.view.has_cache(v):
                 # insert content
                 self.controller.put_content(v)
-        print(self.controller.model.models[path[-2]].get_state())
         self.controller.end_session()
 
 

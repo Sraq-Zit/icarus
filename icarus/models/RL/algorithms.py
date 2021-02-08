@@ -53,7 +53,8 @@ class Qlearning:
                                      columns=possible_states)
 
         # Initialize epsilon greedy policy
-        self._epsilon_greedy = EpsilonGreedy(epsilon, len(possible_actions))
+        # self._epsilon_greedy = EpsilonGreedy(epsilon, len(possible_actions))
+
 
         # Save the parameters
         self._learn_rate = learning_rate
@@ -91,6 +92,7 @@ class Qlearning:
 
 @register_rl_algorithms('Q-LEARNING')
 class Q_learning:
+
     def __init__(self, *args, **kwargs):
         self.node = kwargs['node']
         self.network_model = kwargs['network_model']
@@ -121,3 +123,14 @@ class Q_learning:
 
     def train(self, *args):
         return self.model.update_model(*args)
+
+    def reward(self):
+        def delivery_reward(content):
+            if self.node in self.network_model.cache and self.network_model.cache[self.node].has(content): return 150
+            source = self.network_model.content_source.get(content, None)
+            for n in self.network_model.get_neigbbors(self.node):
+                if n!=source and n in self.network_model.cache and self.network_model.cache[n].has(content): return -50
+            return -150
+
+        return sum([delivery_reward(c) * (self.network_model.POPULARITY[c] / (sum(self.network_model.POPULARITY.values()) or 1))
+                        for c in range(1, self.network_model.n_contents+1)])

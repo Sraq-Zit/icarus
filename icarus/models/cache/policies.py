@@ -8,6 +8,7 @@ from __future__ import division
 import abc
 import copy
 import random
+import logging
 from collections import defaultdict, deque
 
 from icarus.registry import register_cache_policy
@@ -15,6 +16,7 @@ from icarus.util import apportionment, inheritdoc
 
 import numpy as np
 
+logger = logging.getLogger()
 
 __all__ = [
     'LinkedSet',
@@ -822,12 +824,14 @@ class BeladyMinCache(Cache):
 class CustomCache(Cache):
     """custom cache eviction policy.
 
-    In this customized policy, we try to make the concept of content size applicable in this echosystem, contents has a *size* property to evict when the content size is bigger than the available cache size.    
+    In this customized policy, we try to make the concept of content size applicable in this echosystem,
+    contents has a *size* property to evict when the content size is bigger than the available cache size.    
     """
     CONTENT_MAP = {}
 
     @inheritdoc(Cache)
     def __init__(self, maxlen, **kwargs):
+        self._replacement_policy = []
         self._cache = LinkedSet()
         self._maxlen = int(maxlen)
         if self._maxlen <= 0:
@@ -846,6 +850,9 @@ class CustomCache(Cache):
     @inheritdoc(Cache)
     def dump(self):
         return list(iter(self._cache))
+
+    def set_replacement_candidates(self, policy):
+        self._replacement_policy = policy
 
     def position(self, k, *args, **kwargs):
         """Return the current position of an item in the cache. Position *0*
@@ -900,14 +907,23 @@ class CustomCache(Cache):
         """
         # if content in cache, push it on top, no eviction
         if k in self._cache:
-            self._cache.move_to_top(k)
             return None
+
         # if content not in cache append it on top
         self._cache.append_top(k)
-        self.CONTENT_MAP[k] = random.randint(int(self._maxlen / 10), int(self._maxlen / 2))
+        if k not in self.CONTENT_MAP:
+            self.CONTENT_MAP[k] = random.randint(int(self._maxlen / 4), int(self._maxlen))
         popped = None
         while len(self) > self._maxlen:
-            popped = self._cache.pop_bottom()
+            if popped == k:
+                logger.warn('This is strange !!! The cache is overflown even after removing the cached content')
+                break
+            if len(self._replacement_policy):
+                popped = self._replacement_policy.pop()
+                self._cache.remove(k)
+            else:
+                popped = k
+                self._cache.remove(k)
         return popped
 
     @inheritdoc(Cache)

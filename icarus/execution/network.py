@@ -411,8 +411,8 @@ class NetworkModel(object):
             if self.CACHE:
                 self.ai_models = self.CACHE
             else:
-                states = range((2**n_contents)*n_contents)
-                actions = range(2**n_contents)
+                states = (2**n_contents)*n_contents
+                actions = 2**n_contents
                 self.CACHE = self.ai_models = {node: RL_ALGO[rl_algorithm['name']](states, actions, node=node, network_model=self)
                                                                                                  for node in cache_size}
 

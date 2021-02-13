@@ -770,8 +770,8 @@ def topology_hierarchy(k, h, delay=1, **kwargs):
     # set weights and delays on all links
     fnss.set_weights_constant(topology, 1.0)
     fnss.set_delays_constant(topology, delay, 'ms', [(u, v) for u, v in topology.edges() if u in receivers or v in receivers])
-    fnss.set_delays_constant(topology, 2*delay, 'ms', [(u, v) for u, v in topology.edges() if u in routers and v in routers])
-    fnss.set_delays_constant(topology, 3*delay, 'ms', [(u, v) for u, v in topology.edges() if u in sources or v in sources])
+    fnss.set_delays_constant(topology, 50*delay, 'ms', [(u, v) for u, v in topology.edges() if u in routers and v in routers])
+    fnss.set_delays_constant(topology, 100*delay, 'ms', [(u, v) for u, v in topology.edges() if u in sources or v in sources])
     return IcnTopology(topology)
 
 

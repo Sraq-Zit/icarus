@@ -1,6 +1,32 @@
 from icarus.registry import register_rl_algorithms
+from scipy.sparse import lil_matrix
 import pandas as pd
 import random
+
+class Sparse:
+    def __init__(self, x, y):
+        if x <= 0 or y <= 0: raise ValueError('Size must be > 0')
+        self._x = x
+        self._y = y
+        self._data = {}
+    def check_coordinates(self, x, y):
+        if x >= self._x or y >= self._y: raise KeyError('Incorrect Coordinates')
+    def __getitem__(self, key):
+        self.check_coordinates(*key)
+        return self._data[key] if key in self._data else 0
+    def __setitem__(self, key, value):
+        self.check_coordinates(*key)
+        self._data[key] = value
+    def get_max_for_x(self, x):
+        y = [(k[1], v) for k, v in self._data.items() if k[0] == x]
+        if not len(y): return (0, 0)
+        y.sort(key=lambda x: x[0])
+        for i, v in enumerate(y):
+            if i != v[0]:
+                y.append((i, 0))
+                break
+        if len(y) < self._y: y.append((len(y), 0))
+        return max(y, key=lambda x: x[1])
 
 
 class EpsilonGreedy():
@@ -46,11 +72,13 @@ class Qlearning:
         :param discount_factor: the discount factor used for Q-learning
         """
         # Initialize the matrix with Q-values
-        init_data = [[float(initial_reward) for _ in possible_states]
-                     for _ in possible_actions]
-        self._qmatrix = pd.DataFrame(data=init_data,
-                                     index=possible_actions,
-                                     columns=possible_states)
+        # init_data = [[float(initial_reward) for _ in possible_states]
+        #              for _ in possible_actions]
+        # self._qmatrix = pd.DataFrame(data=init_data,
+        #                              index=possible_actions,
+        #                              columns=possible_states)
+
+        self._qmatrix = Sparse(possible_states, possible_actions)
 
         # Initialize epsilon greedy policy
         # self._epsilon_greedy = EpsilonGreedy(epsilon, len(possible_actions))
@@ -67,7 +95,7 @@ class Qlearning:
         :return: the best action from the given state
         """
         # Return the action (index) with maximum Q-value
-        return self._qmatrix[[state]].idxmax().iloc[0]
+        return self._qmatrix.get_max_for_x(state)[0]
 
     def update_model(self, state, action, reward, next_state):
         """
@@ -79,15 +107,16 @@ class Qlearning:
         """
         # Update q_value for a state-action pair Q(s,a):
         # Q(s,a) = Q(s,a) + α( r + γmaxa' Q(s',a') - Q(s,a) )
-        q_sa = self._qmatrix.loc[action, state]
-        max_q_sa_next = self._qmatrix.loc[self.get_best_action(next_state), next_state]
+        q_sa = self._qmatrix[state, action]
+        
+        max_q_sa_next = self._qmatrix[next_state, self.get_best_action(next_state)]
         r = reward
         alpha = self._learn_rate
         gamma = self._discount_factor
 
         # Do the computation
         new_q_sa = q_sa + alpha * (r + gamma * max_q_sa_next - q_sa)
-        self._qmatrix.at[action, state] = new_q_sa
+        self._qmatrix[state, action] = new_q_sa
 
 
 @register_rl_algorithms('Q-LEARNING')

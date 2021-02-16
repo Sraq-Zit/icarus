@@ -409,7 +409,8 @@ class NetworkModel(object):
         self.ai_models = {}
         if rl_algorithm:
             if self.CACHE:
-                self.ai_models = self.CACHE
+                for _, model in NetworkModel.CACHE.items(): model.network_model = self
+                self.ai_models = NetworkModel.CACHE
             else:
                 states = (2**n_contents)*n_contents
                 actions = 2**n_contents
@@ -891,6 +892,9 @@ class NetworkController(object):
     def convert_action(self, action):
         return [int(b) for b in bin(action)[2:].rjust(self.model.n_contents, '0')]
     
+    def get_avg_reward(self):
+        rewards = [self.get_reward(n) or 0 for n in self.model.topology.graph['icr_candidates']]
+        return sum(rewards) / len(rewards)
 
     def save_observation(self, node, *args):
         self.model.observations[node] = args
@@ -903,4 +907,8 @@ class NetworkController(object):
     def get_reward(self, node):
         if node in self.model.ai_models:
             return self.model.ai_models[node].reward()
+
+    def revert_back_cache(self, node):
+        if node in self.model.cache:
+            return self.model.cache[node].revert_back()
         

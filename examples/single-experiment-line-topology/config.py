@@ -19,7 +19,7 @@ PARALLEL_EXECUTION = False
 N_PROCESSES = cpu_count()
 
 # Number of times each experiment is replicated
-N_REPLICATIONS = 10
+N_REPLICATIONS = 1
 
 # Granularity of caching.
 # Currently, only OBJECT is supported
@@ -48,9 +48,9 @@ experiment['topology']['k'] = 4
 # Set workload
 experiment['workload'] = {
          'name':       'STATIONARY',
-         'n_contents': 8,
-         'n_warmup':   10 ** 2,
-         'n_measured': 4 * 10 ** 2,
+         'n_contents': 3000,
+         'n_warmup':   10,
+         'n_measured': 30 * 2000,
          'alpha':      1.0,
          'rate':       1
                        }

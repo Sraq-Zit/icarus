@@ -7,6 +7,8 @@ and providing them to a strategy instance.
 """
 from icarus.execution import NetworkModel, NetworkView, NetworkController, CollectorProxy
 from icarus.registry import DATA_COLLECTOR, STRATEGY
+import logging
+logger = logging.getLogger('engine')
 
 
 __all__ = ['exec_experiment']
@@ -56,7 +58,16 @@ def exec_experiment(topology, workload, netconf, strategy, cache_policy, collect
     strategy_name = strategy['name']
     strategy_args = {k: v for k, v in strategy.items() if k != 'name'}
     strategy_inst = STRATEGY[strategy_name](view, controller, **strategy_args)
-
+    i=0
     for time, event in workload:
         strategy_inst.process_event(time, **event)
+        i+=1
+        if not i%30:
+            results = collector.results()
+            logger.info('Mean hit ratio: %f | Mean latency: %f | Reward: %f.'%(results['CACHE_HIT_RATIO']['MEAN'], results['LATENCY']['MEAN'], controller.get_avg_reward()))
+
+
+    
+    # workload.reward = controller.get_avg_reward()
+
     return collector.results()

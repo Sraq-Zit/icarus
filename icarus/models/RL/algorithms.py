@@ -2,6 +2,7 @@ from icarus.registry import register_rl_algorithms
 from scipy.sparse import lil_matrix
 import pandas as pd
 import random
+import math
 
 class Sparse:
     def __init__(self, x, y):
@@ -19,13 +20,15 @@ class Sparse:
         self._data[key] = value
     def get_max_for_x(self, x):
         y = [(k[1], v) for k, v in self._data.items() if k[0] == x]
-        if not len(y): return (0, 0)
-        y.sort(key=lambda x: x[0])
-        for i, v in enumerate(y):
-            if i != v[0]:
-                y.append((i, 0))
-                break
-        if len(y) < self._y: y.append((len(y), 0))
+        if not len(y): return (random.randint(0, self._y), 0)
+
+        if len(y) < self._y:
+            ids = set([i for i, _ in y])
+            while True:
+                i = random.randint(0, self._y)
+                if i not in ids:
+                    y.append((i, 0))
+                    break
         return max(y, key=lambda x: x[1])
 
 
@@ -155,11 +158,12 @@ class Q_learning:
 
     def reward(self):
         def delivery_reward(content):
-            if self.node in self.network_model.cache and self.network_model.cache[self.node].has(content): return 150
+            size = self.network_model.cache[self.node].sizeof(content)
+            if self.node in self.network_model.cache and self.network_model.cache[self.node].has(content): return 1e-7 * size
             source = self.network_model.content_source.get(content, None)
             for n in self.network_model.get_neigbbors(self.node):
-                if n!=source and n in self.network_model.cache and self.network_model.cache[n].has(content): return -50
-            return -150
+                if n!=source and n in self.network_model.cache and self.network_model.cache[n].has(content): return 5e-5 * size
+            return 10e-3 * size
 
-        return sum([delivery_reward(c) * (self.network_model.POPULARITY[c] / (sum(self.network_model.POPULARITY.values()) or 1))
-                        for c in range(1, self.network_model.n_contents+1)])
+        return 1e3 * math.exp(-sum([delivery_reward(c) * (self.network_model.POPULARITY[c] / (sum(self.network_model.POPULARITY.values()) or 1))
+                        for c in range(1, self.network_model.n_contents+1)]))

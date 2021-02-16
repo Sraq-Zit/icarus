@@ -832,15 +832,16 @@ class CustomCache(Cache):
     @inheritdoc(Cache)
     def __init__(self, maxlen, **kwargs):
         self._replacement_policy = []
-        self._cache = LinkedSet()
+        self._cache = set()
         self._maxlen = int(maxlen)
+        self._previous_cache = None
         if self._maxlen <= 0:
             raise ValueError('maxlen must be positive')
 
 
     @inheritdoc(Cache)
     def __len__(self):
-        return sum([self.CONTENT_MAP[c] for c in self._cache])
+        return sum([CustomCache.CONTENT_MAP[c] for c in self._cache])
 
     @property
     @inheritdoc(Cache)
@@ -852,29 +853,11 @@ class CustomCache(Cache):
         return list(iter(self._cache))
 
     def set_replacement_candidates(self, policy):
+        self._previous_cache = set(self._cache)
         self._replacement_policy = policy
 
-    def position(self, k, *args, **kwargs):
-        """Return the current position of an item in the cache. Position *0*
-        refers to the head of cache (i.e. most recently used item), while
-        position *maxlen - 1* refers to the tail of the cache (i.e. the least
-        recently used item).
-
-        This method does not change the internal state of the cache.
-
-        Parameters
-        ----------
-        k : any hashable type
-            The item looked up in the cache
-
-        Returns
-        -------
-        position : int
-            The current position of the item in the cache
-        """
-        if k not in self._cache:
-            raise ValueError('The item %s is not in the cache' % str(k))
-        return self._cache.index(k)
+    def revert_back(self):
+        self._cache = self._previous_cache
 
     @inheritdoc(Cache)
     def has(self, k, *args, **kwargs):
@@ -882,12 +865,7 @@ class CustomCache(Cache):
 
     @inheritdoc(Cache)
     def get(self, k, *args, **kwargs):
-        # search content over the list
-        # if it has it push on top, otherwise return false
-        if k not in self._cache:
-            return False
-        self._cache.move_to_top(k)
-        return True
+        return k in self._cache
 
     def put(self, k, *args, **kwargs):
         """Insert an item in the cache if not already inserted.
@@ -905,25 +883,25 @@ class CustomCache(Cache):
         evicted : any hashable type
             The evicted object or *None* if no contents were evicted.
         """
-        # if content in cache, push it on top, no eviction
+
         if k in self._cache:
             return None
 
         # if content not in cache append it on top
-        self._cache.append_top(k)
-        if k not in self.CONTENT_MAP:
-            self.CONTENT_MAP[k] = random.randint(int(self._maxlen / 4), int(self._maxlen))
+        self._cache.add(k)
+        if k not in CustomCache.CONTENT_MAP:
+            CustomCache.CONTENT_MAP[k] = random.randint(int(self._maxlen/200), int(self._maxlen/50))
         popped = None
         while len(self) > self._maxlen:
             if popped == k:
-                logger.warn('This is strange !!! The cache is overflown even after removing the cached content')
+                logger.warn('This is strange !!! The cache is overflown even after removing the cached content\nmax: %d, cache: %d'%(self._maxlen, len(self)))
                 break
             if len(self._replacement_policy):
                 popped = self._replacement_policy.pop()
-                self._cache.remove(k)
+                self.remove(popped)
             else:
                 popped = k
-                self._cache.remove(k)
+                self.remove(k)
         return popped
 
     @inheritdoc(Cache)
@@ -937,6 +915,8 @@ class CustomCache(Cache):
     def clear(self):
         self._cache.clear()
 
+    def sizeof(self, k):
+        return CustomCache.CONTENT_MAP[k] if k in CustomCache.CONTENT_MAP else 0
 
 @register_cache_policy('LRU')
 class LruCache(Cache):

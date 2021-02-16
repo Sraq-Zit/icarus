@@ -284,10 +284,9 @@ def run_scenario(settings, params, curr_exp, n_exp):
 
         logger.info('Experiment %d/%d | Start simulation', curr_exp, n_exp)
         results = exec_experiment(topology, workload, netconf, strategy, cache_policy, collectors)
-
         duration = time.time() - start_time
-        logger.info('Experiment %d/%d | End simulation | Duration %s.',
-                    curr_exp, n_exp, timestr(duration, True))
+        logger.info('Experiment %d/%d | End simulation | Mean hit ratio: %f | Mean latency: %f | Reward: %f | Duration %s.',
+                    curr_exp, n_exp, results['CACHE_HIT_RATIO']['MEAN'], results['LATENCY']['MEAN'], workload.reward, timestr(duration, True))
         return (params, results, duration)
     except KeyboardInterrupt:
         logger.error('Received keyboard interrupt. Terminating')

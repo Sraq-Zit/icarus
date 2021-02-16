@@ -113,10 +113,12 @@ class AI_EMPOWERED(Strategy):
     @inheritdoc(Strategy)
     def __init__(self, view, controller, **kwargs):
         super(AI_EMPOWERED, self).__init__(view, controller)
+        self.old_reward = -1e6
 
     @inheritdoc(Strategy)
     def process_event(self, time, receiver, content, log):
         # get all required data
+        # print(self.old_reward)
         serving_node = None
         source = self.view.content_source(content)
         path = self.view.shortest_path(receiver, source)
@@ -161,10 +163,16 @@ class AI_EMPOWERED(Strategy):
         action_converted = self.controller.convert_action(action)
         if action_converted[content-1]:
             policy = [n+1 for n, p in enumerate(action_converted) if p and n+1 != content]
-            self.controller.set_replacement_candidates(content, policy)
+            self.controller.set_replacement_candidates(rsu, policy)
             self.controller.put_content(rsu)
-        
 
+            reward_after = self.controller.get_avg_reward()
+                
+            if reward_after < self.old_reward:
+                self.controller.revert_back_cache(rsu)
+            else:
+                self.old_reward = reward_after
+        
         self.controller.train_model(rsu, state)
         self.controller.save_observation(rsu, state, action, self.controller.get_reward(rsu))
         self.controller.end_session()
